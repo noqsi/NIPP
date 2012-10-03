@@ -1,0 +1,54 @@
+.TH NIPP 3 "10 February 2012"
+.SH NAME
+Noqsi Inter-Process communications Protocol (NIPP) API
+.SH SYNOPSIS
+.B #include <nipp.h>
+
+.sp
+.BI "nipp_message_t *nipp_new_message( bool " command, " unsigned " id,
+.br
+.BI "   unsigned " sequence, " unsigned " length, " unsigned " function " )"
+.br
+.BI "int nipp_truncate( unsigned " length " )"
+.br
+.BI "int nipp_send( nipp_message_t " *msg " )"
+.sp
+.BI "nipp_message_t *nipp_get_message( unsigned " timeout " )"
+.br
+.BI "int nipp_check_message( nipp_message_t " *msg " )"
+.sp
+.BI "bool NIPP_COMMAND( nipp_message_t " *msg " )"
+.br
+.BI "unsigned NIPP_ID( nipp_message_t " *msg " )"
+.br
+.BI "unsigned NIPP_SEQUENCE( nipp_message_t " *msg " )"
+.br
+.BI "unsigned NIPP_LENGTH( nipp_message_t " *msg " )"
+.br
+.BI "unsigned NIPP_FUNCTION( nipp_message_t " *msg " )"
+.br
+.BI "void *NIPP_DATA( nipp_message_t " *msg " )"
+.sp
+.BI "int nipp_default_handler( nipp_message_t " *msg " )"
+.sp
+.SH DESCRIPTION
+.LP 
+These functions and macros define the application-visible interface to the NIPP
+inter-process communications protocol.
+.TP
+.I command
+is a one bit flag, 0 for a "data" packet, 1 for a "command" packet.
+.TP
+.I id
+is an 11 bit "application ID" (range 0-2047). Roughly speaking, this should identify the destination of commands and the source of data. A command response might sensibly copy this from the input packet to the output packet.
+.TP
+.I sequence
+is a 14 bit "sequence number" (range 0-16383). It has no defined function in NIPP, but application code may use it to sequence packets, or for other purposes.
+.TP
+.I length
+is the length, in bytes, of the data array. It ranges from 0 to 
+.BR NIPP_MAX_LENGTH .
+.TP
+.I function
+is a 7 bit code (range 0-127), intended to identify the data or command.
+.LP
