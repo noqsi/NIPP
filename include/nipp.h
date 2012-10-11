@@ -30,6 +30,10 @@ typedef uint8_t nipp_message_t[ NIPP_HEADER_LENGTH + NIPP_MAX_LENGTH ];
 #define NIPP_FUNCTION(m) ((unsigned)(m[6]&0x7f))
 #define NIPP_DATA(m) ((void *)(m+NIPP_HEADER_LENGTH))
 
+/*
+ * Primary API from nipp.c
+ */
+
 extern nipp_message_t *nipp_new_message( bool command, unsigned id,
 	unsigned sequence, unsigned length, unsigned function );
 
@@ -45,3 +49,40 @@ extern int nipp_default_handler( nipp_message_t *msg );
 
 extern int nipp_errno;
 
+/*
+ * Lower level functions that the host interface code or embedded application
+ * must provide..
+ */
+
+extern void nipp_abort_tx( nipp_message_t *msg );
+
+extern void nipp_abort_rx( void );
+
+extern nipp_message_t *nipp_outgoing( unsigned length );
+
+extern unsigned nipp_get_bytes( void *buffer, unsigned bytes, unsigned *timeout );
+
+extern int nipp_send_buffer( nipp_message_t *msg, unsigned bytes );
+
+/*
+ * Host interface code may provide a function to attach NIPP to a particular
+ * file or socket.
+ */
+
+extern int nipp_attach( int fd );
+
+/*
+ * Error codes
+ */
+
+#define NIPP_INVALID 1
+#define NIPP_TOO_LONG 2
+#define NIPP_TIMEOUT 3
+#define NIPP_NOMEM 4
+#define NIPP_EIO 5
+
+/*
+ * Wait forever for message.
+ */
+
+NIPP_FOREVER ((unsigned)-1)

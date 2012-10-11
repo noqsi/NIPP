@@ -28,8 +28,6 @@ nipp_message_t *nipp_new_message( bool command, unsigned id,
 	
 	if( !m ) return 0;	// errno already set
 	
-	bzero( m, sizeof( nipp_message_t ));
-	
 	if( id > 0x7ff || function > 0x7f ) {
 		nipp_errno = NIPP_INVALID;
 		return 0;
@@ -73,7 +71,7 @@ int nipp_send( nipp_message_t *m )
 	
 	if( length > NIPP_MAX_LENGTH ) {
 		nipp_errno = NIPP_TOO_LONG;
-		nipp_abort( m );
+		nipp_abort_tx( m );
 		return -1;
 	}
 	
@@ -96,7 +94,16 @@ nipp_message_t *nipp_get_message( unsigned timeout )
 	
 	// OK, have a header, now get data
 	
-	t = NIPP_LENGTH( b ) + NIPP_HEADER_LENGTH;
+	t = NIPP_LENGTH( b );
+	
+	if( t > NIPP_MAX_LENGTH ) {
+		nipp_errno = NIPP_TOO_LONG;
+		nipp_abort_rx();
+		bytes = 0;
+		return 0;
+	}
+	
+	t += NIPP_HEADER_LENGTH;
 	
 	while( bytes < t ) {
 		c = nipp_get_bytes( b + bytes, t - bytes, &timeout );
@@ -114,7 +121,7 @@ nipp_message_t *nipp_get_message( unsigned timeout )
 
 int nipp_default_handler( nipp_message_t *msg )
 {
-	return 1;	// Stub for now
+	return 0;	// Stub for now
 }
 
 

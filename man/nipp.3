@@ -1,8 +1,8 @@
-.TH NIPP 3 "10 February 2012"
+.TH NIPP 3 "3 October 2012"
 .SH NAME
-Noqsi Inter-Process communications Protocol (NIPP) API
+Noqsi Inter-Process communication Protocol (NIPP) API
 .SH SYNOPSIS
-.B #include <nipp.h>
+.B #include "nipp.h"
 
 .sp
 .BI "nipp_message_t *nipp_new_message( bool " command, " unsigned " id,
@@ -16,6 +16,10 @@ Noqsi Inter-Process communications Protocol (NIPP) API
 .BI "nipp_message_t *nipp_get_message( unsigned " timeout " )"
 .br
 .BI "int nipp_check_message( nipp_message_t " *msg " )"
+.sp
+.BI "void nipp_abort_tx( nipp_message_t " *msg " )"
+.br
+.BI "void nipp_abort_rx( void )"
 .sp
 .BI "bool NIPP_COMMAND( nipp_message_t " *msg " )"
 .br
@@ -31,16 +35,18 @@ Noqsi Inter-Process communications Protocol (NIPP) API
 .sp
 .BI "int nipp_default_handler( nipp_message_t " *msg " )"
 .sp
+.BI "int nipp_errno"
+.sp
 .SH DESCRIPTION
 .LP 
 These functions and macros define the application-visible interface to the NIPP
 inter-process communications protocol.
 .TP
 .I command
-is a one bit flag, 0 for a "data" packet, 1 for a "command" packet.
+is a one bit flag, 0 for a "data" packet, 1 for a "command" packet. This is not a hard distinction: command and data packets do not have different properties in NIPP. Generally, this bit will influence the routing of the packet, and may influence the behavior of the process(es) that receive it.
 .TP
 .I id
-is an 11 bit "application ID" (range 0-2047). Roughly speaking, this should identify the destination of commands and the source of data. A command response might sensibly copy this from the input packet to the output packet.
+is an 11 bit "application ID" (range 0-2047). Roughly speaking, this is intended to identify the destination of commands and the source of data. A command response might sensibly copy this from the input command packet to the output data packet.
 .TP
 .I sequence
 is a 14 bit "sequence number" (range 0-16383). It has no defined function in NIPP, but application code may use it to sequence packets, or for other purposes.
@@ -51,4 +57,6 @@ is the length, in bytes, of the data array. It ranges from 0 to
 .TP
 .I function
 is a 7 bit code (range 0-127), intended to identify the data or command.
+.SH HISTORY
 .LP
+HETE-2 used a message transmission API called IPP, similar to this API. LRO used a CCSDS packet subset with header data similar (but not identical to) IPP. NIPP uses the LRO headers with an API similar to IPP. Thus, unlike IPP, NIPP packets can traverse CCSDS networks,
