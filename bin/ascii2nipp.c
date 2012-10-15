@@ -31,7 +31,7 @@ static void getword()
 static void getentry()
 {
 	int *p = array;
-	int *e = array + IPP_MAX_DATA_LENGTH;
+	int *e = array + NIPP_MAX_LENGTH;
 	
 	strcpy( word, nextword );	/* get keyword */
 	bzero(( char *) array, sizeof array );
@@ -62,7 +62,7 @@ static void getentry()
 }
 
 
-void main(int argc)			/* no args */
+int main(int argc)			/* no args */
 {
 	bool command = 0;
 	unsigned id = 0;
@@ -113,7 +113,7 @@ void main(int argc)			/* no args */
        				sequence++, length, function );
 			
 			if( !m ) {
-				fprintf( stderr, "nipp_new_message: error %n\n", 
+				fprintf( stderr, "nipp_new_message: error %d\n", 
 					nipp_errno );
 				exit( EXIT_FAILURE );
 			}
@@ -122,7 +122,7 @@ void main(int argc)			/* no args */
 				((uint8_t *)NIPP_DATA(m))[i] = array[ i ];
 		
 			if( nipp_send( m )) {
-				fprintf( stderr, "nipp_send: error %n\n", 
+				fprintf( stderr, "nipp_send: error %d\n", 
 					nipp_errno );
 				exit( EXIT_FAILURE );
 			}

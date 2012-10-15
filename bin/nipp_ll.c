@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/select.h>
+#include <sys/errno.h>
 #include "nipp.h"
 
 static int fd;
@@ -16,6 +18,7 @@ int nipp_attach( int f )
 	FD_ZERO( &rfds );
 	FD_ZERO( &efds );
 	fd = f;
+	return 0;
 }
 
 /*
@@ -33,7 +36,7 @@ void nipp_abort_tx( nipp_message_t *msg )
 
 void nipp_abort_rx( void )
 {
-	fprinf( stderr, "NIPP: communication problem, no recovery implemented.\n" );
+	fprintf( stderr, "NIPP: communication problem, no recovery implemented.\n" );
 	exit( EXIT_FAILURE );
 }
 
@@ -43,7 +46,8 @@ void nipp_abort_rx( void )
  
 nipp_message_t *nipp_outgoing( unsigned length )
 {
-	uint8_t *m = calloc( length + NIPP_HEADER_LENGTH, sizeof(uint8_t));
+	nipp_message_t *m = 
+		calloc( length + NIPP_HEADER_LENGTH, sizeof(uint8_t));
 	
 	if( !m ) nipp_errno = NIPP_NOMEM;
 	
@@ -91,4 +95,22 @@ unsigned nipp_get_bytes( void *buffer, unsigned bytes, unsigned *timeout )
 
 
 int nipp_send_buffer( nipp_message_t *msg, unsigned bytes )
+{
+	void *buf = msg;
+	unsigned n;
+	
+	while( bytes > 0 ) {
+		n = write( fd, buf, bytes );
+		
+		if( n < 0 && errno != EINTR ) {
+			nipp_errno = NIPP_EIO;
+			return -1;
+		}
+		
+		bytes -= n;
+		buf += n;
+	}
+	
+	return 0;
+}
 
