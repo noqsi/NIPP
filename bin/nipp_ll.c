@@ -85,7 +85,7 @@ unsigned nipp_get_bytes( void *buffer, unsigned bytes, unsigned *timeout )
 		n = read( fd, buffer, bytes );
 	} while( n < 0 && errno == EINTR );
 	
-	if( n <= 0 ) {
+	if( n < 0 ) {
 		nipp_errno = NIPP_EIO;
 		return 0;
 	}

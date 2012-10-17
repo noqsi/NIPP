@@ -12,7 +12,7 @@ uint8_t nipp_check_message( nipp_message_t *m )
 {
 	unsigned len = NIPP_LENGTH(m) + NIPP_HEADER_LENGTH;
 	unsigned i;
-	uint8_t parity = 0;
+	uint8_t parity = 0xff;
 	
 	for( i = 0; i < len; i += 1 ) parity ^= (*m)[i];
 	
@@ -74,6 +74,8 @@ int nipp_send( nipp_message_t *m )
 		nipp_abort_tx( m );
 		return -1;
 	}
+	
+	(*m)[7] = nipp_check_message( m );
 	
 	return nipp_send_buffer( m, length + NIPP_HEADER_LENGTH );
 }	

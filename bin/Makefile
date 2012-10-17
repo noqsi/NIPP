@@ -1,11 +1,17 @@
 CFLAGS:= $(CFLAGS) -I../include -L../lib -lnipp
 
-BIN= ascii2nipp
+BIN= ascii2nipp nipp2ascii
 
 all : $(BIN)
 
-ascii2nipp : nipp_ll.o
-	$(CC) $(CFLAGS) ascii2nipp.c nipp_ll.o
+ascii2nipp : nipp_ll.o ascii2nipp.c
+	$(CC) $(CFLAGS) ascii2nipp.c nipp_ll.o -o ascii2nipp
+
+nipp2ascii : nipp_ll.o nipp2ascii.c
+	$(CC) $(CFLAGS) nipp2ascii.c nipp_ll.o -o nipp2ascii
+
+test : $(BIN) test.txt
+	./ascii2nipp <test.txt | ./nipp2ascii | diff - test.txt
 
 clean :
 	rm -f $(BIN) *.o
