@@ -1,5 +1,5 @@
 #include "nipp.h"
-#include <strings.h>
+#include <string.h>
 
 int nipp_errno;
 
