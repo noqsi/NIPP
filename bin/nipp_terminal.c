@@ -117,9 +117,13 @@ static void poll( void )
 	
 	for(;;) {
 		FD_ZERO(&rf);
-		if( !waiting ) FD_SET( 0, &rf );
+		FD_ZERO(&ef);
+		if( !waiting ){
+			FD_SET( 0, &rf );
+			FD_SET( 0, &ef );
+		}
 		FD_SET( packet_fd, &rf );
-		FD_COPY( &rf, &ef );
+		FD_SET( packet_fd, &ef );
 		n = select( packet_fd + 1, &rf, 0, &ef, 0 );
 
 		if( n < 0 ) {
