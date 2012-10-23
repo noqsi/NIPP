@@ -104,6 +104,7 @@ int nipp_send_buffer( nipp_message_t *msg, unsigned bytes )
 		
 		if( n < 0 && errno != EINTR ) {
 			nipp_errno = NIPP_EIO;
+			free( msg );
 			return -1;
 		}
 		
@@ -111,6 +112,7 @@ int nipp_send_buffer( nipp_message_t *msg, unsigned bytes )
 		buf += n;
 	}
 	
+	free( msg );
 	return 0;
 }
 
