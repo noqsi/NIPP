@@ -2,6 +2,12 @@
 #include <stdbool.h>
 
 /*
+ * Sync word separating packets
+ */
+
+#define NIPP_SYNC	0xaec7cd20
+
+/*
  * Constants for benefit of CCSDS
  */
  
@@ -64,6 +70,10 @@ extern unsigned nipp_get_bytes( void *buffer, unsigned bytes, unsigned *timeout 
 
 extern int nipp_send_buffer( nipp_message_t *msg, unsigned bytes );
 
+extern int nipp_find_sync( unsigned *timeout );
+
+extern int nipp_send_sync( void );
+
 /*
  * Host interface code may provide a function to attach NIPP to a particular
  * file or socket.
@@ -80,6 +90,7 @@ extern int nipp_attach( int fd );
 #define NIPP_TIMEOUT 3
 #define NIPP_NOMEM 4
 #define NIPP_EIO 5
+#define NIPP_BAD_SYNC 6
 
 /*
  * Wait forever for message.

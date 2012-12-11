@@ -77,8 +77,10 @@ int nipp_send( nipp_message_t *m )
 	
 	(*m)[7] = nipp_check_message( m );
 	
+	if( nipp_send_sync() < 0 ) return -1;
+	
 	return nipp_send_buffer( m, length + NIPP_HEADER_LENGTH );
-}	
+}
 
 
 nipp_message_t *nipp_get_message( unsigned timeout )
@@ -86,6 +88,10 @@ nipp_message_t *nipp_get_message( unsigned timeout )
 	static nipp_message_t b;
 	static unsigned bytes = 0;
 	unsigned c, t;
+	int n;
+	
+	n = nipp_find_sync( &timeout );
+	if( n < 0 ) return 0;		// Error looking for sync
 	
 	while( bytes < NIPP_HEADER_LENGTH ){
 		c = nipp_get_bytes( b + bytes, NIPP_HEADER_LENGTH - bytes,
@@ -125,5 +131,3 @@ int nipp_default_handler( nipp_message_t *msg )
 {
 	return 0;	// Stub for now
 }
-
-

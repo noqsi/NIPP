@@ -40,11 +40,11 @@ void print_msg( nipp_message_t *m )
 
 
 
-int main(int argc)		/* no args in this version */
+int main(int argc, char *argv[])
 {
 	nipp_message_t *m;
 	
-	if (argc > 1)
+	if (argc > 1)		/* no args in this version */
 	{
 		fprintf (stderr, "Usage:  nipp2ascii < ippfile > asciifile (no options)\n");
 		exit(EXIT_FAILURE);
@@ -56,7 +56,7 @@ int main(int argc)		/* no args in this version */
 	
 	(void) nipp_attach( 0 );
 	
-	while( m = nipp_get_message( NIPP_FOREVER )) print_msg( m );
+	while( (m = nipp_get_message( NIPP_FOREVER )) ) print_msg( m );
 				
 	if( nipp_errno == 0 ) exit( EXIT_SUCCESS );
 	

@@ -62,7 +62,7 @@ static void getentry()
 }
 
 
-int main(int argc)			/* no args */
+int main(int argc, char *argv[] )
 {
 	bool command = 0;
 	unsigned id = 0;
@@ -70,7 +70,7 @@ int main(int argc)			/* no args */
 	unsigned length = 0;
 	unsigned function = 0;
 
-	if (argc > 1)
+	if (argc > 1)			/* no args */
 	{
 		fprintf (stderr, "Usage:  ascii2nipp < asciifile > nippfile (no options)\n");
 		exit(0);

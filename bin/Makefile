@@ -1,4 +1,4 @@
-CFLAGS:= $(CFLAGS) -I../include -L../lib
+CFLAGS:= $(CFLAGS) -I../include -L../lib -Wall
 
 BIN= ascii2nipp nipp2ascii nipp_terminal
 

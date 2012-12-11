@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -113,7 +114,6 @@ static void poll( void )
 {
 	fd_set rf, ef;
 	int n;
-	char c;
 	
 	for(;;) {
 		FD_ZERO(&rf);

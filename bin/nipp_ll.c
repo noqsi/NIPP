@@ -3,11 +3,18 @@
 #include <unistd.h>
 #include <sys/select.h>
 #include <sys/errno.h>
+#include <string.h>
 #include "nipp.h"
 
 static int fd;
 static fd_set rfds;	// read
 static fd_set efds;	// error
+
+static uint8_t sync_bytes[] = {	// Sync as bytes in bigendian order
+	(NIPP_SYNC>>24)&0xff,
+	(NIPP_SYNC>>16)&0xff,
+	(NIPP_SYNC>>8)&0xff,
+	NIPP_SYNC&0xff };
 
 /*
  * Attach NIPP to a particular file or socket.
@@ -31,13 +38,12 @@ void nipp_abort_tx( nipp_message_t *msg )
 }
 
 /*
- * We have no recovery strategy at present
+ * This implementation does nothing for nipp_abort_rx().
+ * There is no need, as nipp_check_sync() does the work.
  */
 
 void nipp_abort_rx( void )
 {
-	fprintf( stderr, "NIPP: communication problem, no recovery implemented.\n" );
-	exit( EXIT_FAILURE );
 }
 
 /*
@@ -93,18 +99,47 @@ unsigned nipp_get_bytes( void *buffer, unsigned bytes, unsigned *timeout )
 	return n;
 }
 
+/*
+ * nipp_find_sync() sets nipp_errno to NIPP_BAD_SYNC if it
+ * has to skip data to find sync. It normally returns zero
+ * unless some other error (like a timeout) occurs.
+ */	
 
-int nipp_send_buffer( nipp_message_t *msg, unsigned bytes )
+int nipp_find_sync( unsigned *timeout )
 {
-	void *buf = msg;
-	unsigned n;
+	uint8_t b[4];	// Buffer to hold sync
+	unsigned have = 0, n;
+	
+	nipp_errno = 0;			// Assume all will be well
+	
+	for(;;) {
+		n = nipp_get_bytes( b + have, 4 - have, timeout );
+		if( n == 0 ) return -1;		// Error
+		have += n;
+		if( have < 4 ) continue;	// need more bytes
+		
+		if( memcmp( b, sync_bytes, 4 ) == 0 ) return 0;	// Success
+		
+		nipp_errno = NIPP_BAD_SYNC;			// Bad news
+		
+		for( have = 3; have > 0; have -= 1 )
+			if( b[4-have] == sync_bytes[0] ) break;	// Search
+			
+		for( n = 0; n < have; n +=1 ) 
+			b[n] = b[ 4 - have + n ];		// Shift
+	}
+}
+
+
+static int nipp_send_bytes( void *buf, unsigned bytes )
+{
+	int n;
 	
 	while( bytes > 0 ) {
 		n = write( fd, buf, bytes );
 		
 		if( n < 0 && errno != EINTR ) {
 			nipp_errno = NIPP_EIO;
-			free( msg );
 			return -1;
 		}
 		
@@ -112,7 +147,21 @@ int nipp_send_buffer( nipp_message_t *msg, unsigned bytes )
 		buf += n;
 	}
 	
-	free( msg );
 	return 0;
+}	
+
+
+int nipp_send_buffer( nipp_message_t *msg, unsigned bytes )
+{
+	int n = nipp_send_bytes( msg, bytes );
+	
+	free( msg );
+	
+	return n;
 }
 
+
+int nipp_send_sync( void )
+{
+	return nipp_send_bytes( sync_bytes, 4 );
+}
