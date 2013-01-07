@@ -12,7 +12,7 @@
 
 static int packet_fd;
 static char *tty_name;
-static unsigned my_id = 77;	/* Should be an arg */
+static unsigned my_id = 0x50;	/* Should be an arg */
 static unsigned sequence = 0;
 static char prompt[] = "LSE> ";	/* Should be arg */
 static bool waiting = 0;	/* Indicates wait for command response */
@@ -37,7 +37,8 @@ static void setup_tty( void )
 
 	if( tcgetattr( packet_fd, &t ) < 0 ) goto error;
 	cfmakeraw( &t );
-	if( cfsetspeed( &t, B115200 ) < 0 ) goto error;
+	t.c_cflag |= CLOCAL;		/* ignore modem signals, should be arg */
+	if( cfsetspeed( &t, B57600 ) < 0 ) goto error;
 	
 	if( tcsetattr( packet_fd, TCSANOW, &t ) < 0 ) goto error;
 	
