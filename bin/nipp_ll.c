@@ -107,8 +107,9 @@ unsigned nipp_get_bytes( void *buffer, unsigned bytes, unsigned *timeout )
 
 int nipp_find_sync( unsigned *timeout )
 {
-	uint8_t b[4];	// Buffer to hold sync
-	unsigned have = 0, n;
+	static uint8_t b[4];	// Buffer to hold sync
+	static unsigned have = 0;
+	unsigned n;
 	
 	nipp_errno = 0;			// Assume all will be well
 	
@@ -118,7 +119,10 @@ int nipp_find_sync( unsigned *timeout )
 		have += n;
 		if( have < 4 ) continue;	// need more bytes
 		
-		if( memcmp( b, sync_bytes, 4 ) == 0 ) return 0;	// Success
+		if( memcmp( b, sync_bytes, 4 ) == 0 ) {
+			have = 0;	// for next time
+			return 0;	// Success
+		}
 		
 		nipp_errno = NIPP_BAD_SYNC;			// Bad news
 		

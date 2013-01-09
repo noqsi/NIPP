@@ -87,11 +87,15 @@ nipp_message_t *nipp_get_message( unsigned timeout )
 {
 	static nipp_message_t b;
 	static unsigned bytes = 0;
+	static int found_sync = 0;
 	unsigned c, t;
 	int n;
 	
-	n = nipp_find_sync( &timeout );
-	if( n < 0 ) return 0;		// Error looking for sync
+	if( !found_sync ) {
+		n = nipp_find_sync( &timeout );
+		if( n < 0 ) return 0;		// Error looking for sync
+		found_sync = 1;
+	}
 	
 	while( bytes < NIPP_HEADER_LENGTH ){
 		c = nipp_get_bytes( b + bytes, NIPP_HEADER_LENGTH - bytes,
@@ -121,7 +125,7 @@ nipp_message_t *nipp_get_message( unsigned timeout )
 	
 	// Set bytes to zero so next call will discard buffer
 	
-	bytes = 0;
+	bytes = found_sync = 0;
 	
 	return &b;
 }
