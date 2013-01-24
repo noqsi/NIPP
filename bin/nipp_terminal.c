@@ -55,26 +55,6 @@ error:	perror( tty_name );
 }
 		
 
-static void line_handler( char *line )
-{
-	unsigned len;
-	nipp_message_t *m;
-	
-	if( !line ) exit( EXIT_SUCCESS );
-	
-	len = strlen( line );
-	m = nipp_new_message( 1, my_id, sequence, len, command_function );
-	if( !m ) {
-		fprintf( stderr, "nipp_terminal: error %d\n", nipp_errno );
-		return;
-	}
-	
-	bcopy( line, NIPP_DATA(m), len );
-	nipp_send( m );
-	waiting = 1;	/* Can't send more until we get a response */
-}
-
-
 static void print_ascii_packet( nipp_message_t *m )
 {
 	int len = NIPP_LENGTH(m);
@@ -115,6 +95,27 @@ static void read_packet( void )
 	
 	print_ascii_packet( m );
 }
+
+static void line_handler( char *line )
+{
+	unsigned len;
+	nipp_message_t *m;
+	
+	if( !line ) exit( EXIT_SUCCESS );
+	
+	len = strlen( line );
+	m = nipp_new_message( 1, my_id, sequence, len, command_function );
+	if( !m ) {
+		fprintf( stderr, "nipp_terminal: error %d\n", nipp_errno );
+		return;
+	}
+	
+	bcopy( line, NIPP_DATA(m), len );
+	nipp_send( m );
+	waiting = 1;	/* Can't send more until we get a response */
+	while( waiting ) read_packet();
+}
+
 	
 
 static void poll( void )
@@ -141,8 +142,8 @@ static void poll( void )
 		if( FD_ISSET( 0, &rf ) || FD_ISSET( 0, &ef )) 
 			rl_callback_read_char();
 				
-//		if( FD_ISSET( packet_fd, &rf ) || FD_ISSET( packet_fd, &ef ))
-//			read_packet();
+		if( FD_ISSET( packet_fd, &rf ) || FD_ISSET( packet_fd, &ef ))
+			read_packet();
 	}
 }
 
