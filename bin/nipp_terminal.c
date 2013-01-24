@@ -28,17 +28,23 @@ static void args( int argc, char *argv[] )	/* should use getopt here */
 	tty_name = argv[1];
 }
 
+static void open_tty( void )
+{
+	packet_fd = open( tty_name, O_RDWR );
+	if( packet_fd >= 0 ) return;
+	perror( tty_name );
+	exit( EXIT_FAILURE );
+}
+	
+
 static void setup_tty( void )
 {
 	struct termios t;
 	
-	packet_fd = open( tty_name, O_RDWR );
-	if( packet_fd < 0 ) goto error;
-
 	if( tcgetattr( packet_fd, &t ) < 0 ) goto error;
 	cfmakeraw( &t );
 	t.c_cflag |= CLOCAL;		/* ignore modem signals, should be arg */
-	if( cfsetspeed( &t, B57600 ) < 0 ) goto error;
+	if( cfsetspeed( &t, B115200 ) < 0 ) goto error;
 	
 	if( tcsetattr( packet_fd, TCSANOW, &t ) < 0 ) goto error;
 	
@@ -135,8 +141,8 @@ static void poll( void )
 		if( FD_ISSET( 0, &rf ) || FD_ISSET( 0, &ef )) 
 			rl_callback_read_char();
 				
-		if( FD_ISSET( packet_fd, &rf ) || FD_ISSET( packet_fd, &ef ))
-			read_packet();
+//		if( FD_ISSET( packet_fd, &rf ) || FD_ISSET( packet_fd, &ef ))
+//			read_packet();
 	}
 }
 
@@ -144,8 +150,9 @@ static void poll( void )
 int main( int argc, char *argv[] )
 {
 	args( argc, argv );
-	nipp_attach( packet_fd );
+	open_tty();
 	if( isatty( packet_fd )) setup_tty();
+	nipp_attach( packet_fd );
 	rl_callback_handler_install( prompt, line_handler );
 	poll();
 	return EXIT_SUCCESS;
