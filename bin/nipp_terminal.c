@@ -61,8 +61,6 @@ static void print_ascii_packet( nipp_message_t *m )
 	
 	if( fwrite( NIPP_DATA(m), sizeof(uint8_t), len, stdout ) != len ) 
 		goto error;
-	if( fwrite( "\n", sizeof(uint8_t), 1, stdout ) != 1) 
-		goto error;
 	return;
 	
 error:	
@@ -112,6 +110,7 @@ static void line_handler( char *line )
 	
 	bcopy( line, NIPP_DATA(m), len );
 	nipp_send( m );
+	if( len > 0 ) add_history( line );
 	waiting = 1;	/* Can't send more until we get a response */
 	while( waiting ) read_packet();
 }
