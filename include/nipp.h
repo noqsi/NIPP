@@ -20,7 +20,7 @@
  * In this implementation, a message is an array of bytes
  */
  
-#define NIPP_MAX_LENGTH		640	// Max data bytes for this implementation
+#define NIPP_MAX_LENGTH		1024	// Max data bytes for this implementation
 #define NIPP_HEADER_LENGTH	8
 
 typedef uint8_t nipp_message_t[ NIPP_HEADER_LENGTH + NIPP_MAX_LENGTH ];
