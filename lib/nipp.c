@@ -20,6 +20,14 @@ uint8_t nipp_check_message( nipp_message_t *m )
 }
 
 
+nipp_message_t *nipp_copy_message(nipp_message_t *msg, int length, int function)
+{
+	return nipp_new_message(
+		NIPP_COMMAND(msg), 
+		NIPP_ID(msg), 
+		NIPP_SEQUENCE(msg),
+		length, function);
+}
 
 nipp_message_t *nipp_new_message( bool command, unsigned id,
 	unsigned sequence, unsigned length, unsigned function )
@@ -51,7 +59,7 @@ nipp_message_t *nipp_new_message( bool command, unsigned id,
 
 int nipp_truncate( nipp_message_t *m, unsigned length )
 {
-	if( length > NIPP_MAX_LENGTH ) {
+	if( length >= NIPP_MAX_LENGTH ) {
 		nipp_errno = NIPP_TOO_LONG;
 		return -1;
 	}
@@ -75,6 +83,7 @@ int nipp_send( nipp_message_t *m )
 		return -1;
 	}
 	
+	(*m)[7] = 0; // clear it, so the check_message is accurate
 	(*m)[7] = nipp_check_message( m );
 	
 	if( nipp_send_sync() < 0 ) return -1;
