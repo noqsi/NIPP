@@ -1,5 +1,5 @@
 LIB= libnipp.a(nipp.o)
-CFLAGS:= $(CFLAGS) -I../include -Wall
+CFLAGS:= $(CFLAGS) -I../include -Wall -fPIC
 
 all : $(LIB)
 
