@@ -48,7 +48,7 @@ typedef uint8_t nipp_message_t[ NIPP_HEADER_LENGTH + NIPP_MAX_LENGTH ];
 #define WR_NIPP_ID(m, v) { (*m)[0] = ((*m)[0] & 0xF8) | (((v) >> 8) & 0x7); (*m)[1] = ((v) & 0xFF); }
 #define WR_NIPP_SEQUENCE(m, v) { (*m)[0] = ((*m)[2] & 0xC0) | (((v) >> 8) & 0x3F); (*m)[3] = ((v) & 0xFF); }
 #define WR_NIPP_LENGTH(m, v) { (*m)[4] = (((v)+1) >> 8); (*m)[5] = (((v)+1) & 0xFF); }
-#define WR_NIPP_FUNCTION(m, v) (((unsigned *)(*m))[6]) = (((unsigned)((*m)[6] & 0x80)) | ((v) & 0x7f))
+#define WR_NIPP_FUNCTION(m, v) (*m)[6] = ((*m)[6] & 0x80) | ((v) & 0x7f)
 
 /*
  * Primary API from nipp.c
