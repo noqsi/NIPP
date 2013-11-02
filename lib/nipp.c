@@ -144,3 +144,62 @@ int nipp_default_handler( nipp_message_t *msg )
 {
 	return 0;	// Stub for now
 }
+
+unsigned int
+nipp_unpack(uint8_t *m, int offset, int lenval)
+{
+	int out=0;
+	int outlen = 0;
+	int byte, toget, offbit, offbyte;
+
+	while (outlen < lenval)
+	{
+        offbit = (offset + outlen) % 8;
+        offbyte = (offset + outlen) / 8;
+		byte = m[offbyte];
+
+		if (lenval - outlen < 8)
+			toget = lenval - outlen;
+		else
+			toget = 8 - offbit;
+
+		offbit = 8 - (offbit + toget);
+		out = (out << toget) | ((byte >> offbit) & ((1<<toget)-1));
+		outlen += toget;
+	}
+
+	return out;
+}
+
+void
+nipp_pack(uint8_t *m, int offset, int lenval, unsigned int val)
+{
+	int endoffset, mask, toset, val2set;
+	int offbit, offbyte;
+
+    endoffset = offset + lenval;
+
+    while (offset < endoffset)
+	{
+        offbit = offset % 8;
+        offbyte = offset / 8;
+        mask=0;
+
+        // compute toset. it's 8-offbit unless that goes beyond endoffset
+        toset = 8-offbit;
+        if (offset + toset > endoffset)
+            toset = endoffset - offset;
+
+        val2set = val >> (endoffset - offset - toset);
+        // now recompute offbit based on toset
+        offbit = 8 - (offbit + toset);
+
+        if (offbit > 0)
+            mask = (1<<offbit) - 1;
+        if (toset + offbit != 8)
+            mask = mask | (~((1<< (toset + offbit)) - 1));
+        m[offbyte] = (m[offbyte] & mask) | ((val2set << offbit) & (~mask & 0xFF));
+        // val = val >> toset
+        offset = offset + toset;
+	}
+}
