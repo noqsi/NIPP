@@ -7,46 +7,44 @@ int nipp_errno;
  * Compute the "checksum" (really longitudinal parity).
  * Should be zero for a valid message.
  */
-
 uint8_t nipp_check_message( nipp_message_t *m )
 {
-	unsigned len = NIPP_LENGTH(m) + NIPP_HDRLEN(m);
+	unsigned len = NIPP_LENGTH(m) + NIPP_HDRLEN;
 	unsigned i;
 	uint8_t parity = 0xff;
 
-	if (NIPP_SECHDR(m))
-		for( i = 0; i < len; i += 1 )
-			parity ^= (*m)[i];
-	else
-		parity = 0; // no sechdr, no checksum field, all good
+	for( i = 0; i < len; i += 1 )
+		parity ^= (*m)[i];
 	
 	return parity;
 }
 
+void
+nipp_add_checksum( nipp_message_t *m)
+{
+	(*m)[7] = 0; // clear it, so the check_message is accurate
+	(*m)[7] = nipp_check_message( m );
+}
 
-nipp_message_t *nipp_copy_message(nipp_message_t *msg, int length, int function)
+nipp_message_t *nipp_copy_message(nipp_message_t *msg, int length)
 {
 	return nipp_new_message(
 		NIPP_COMMAND(msg), 
 		NIPP_ID(msg), 
 		NIPP_SEQUENCE(msg),
-		length, function);
+		length);
 }
 
 nipp_message_t *nipp_new_message( bool command, unsigned id,
-	unsigned sequence, unsigned length, int function )
+	unsigned sequence, unsigned length )
 {
 	nipp_message_t *m = nipp_outgoing( length );
-	int sechdr;
+	int sechdr = 1;
 
 	if( !m ) return 0;	// errno already set
 
-	if (function == -1)
-		sechdr = 0;
-	else
-		sechdr = 1; // note: must be 1, not some other nonzero value
-
-	if( id > 0x7ff || (sechdr && function > 0x7f) ) {
+	if( id > 0x7ff )
+	{
 		nipp_errno = NIPP_INVALID;
 		return 0;
 	}
@@ -55,16 +53,9 @@ nipp_message_t *nipp_new_message( bool command, unsigned id,
 	(*m)[1] = id;
 	(*m)[2] = CCSDS_SEGMENTATION | ((sequence>>8)&0x3f);	// wrap sequence
 	(*m)[3] = sequence;
-	length += 1;		// Correct for CCSDS conventions
+	length -= 1;		// Correct for CCSDS conventions
 	(*m)[4] = length>>8;
-	
-	if (sechdr)
-	{
-		(*m)[5] = length;
-		(*m)[6] = CCSDS_SECONDARY_HEADER | function;
-	}
-	
-	// Can't fill in parity byte yet
+	(*m)[5] = length;
 	
 	return m;
 }
@@ -78,14 +69,12 @@ int nipp_truncate( nipp_message_t *m, unsigned length )
 		return -1;
 	}
 	
-	length += 1;		// Correct for CCSDS conventions
+	length -= 1;		// Correct for CCSDS conventions
 	(*m)[4] = length>>8;
 	(*m)[5] = length;
 	
 	return 0;
 }
-
-
 
 int nipp_send( nipp_message_t *m )
 {
@@ -97,19 +86,13 @@ int nipp_send( nipp_message_t *m )
 		return -1;
 	}
 	
-	if (NIPP_SECHDR(m))
-	{
-		(*m)[7] = 0; // clear it, so the check_message is accurate
-		(*m)[7] = nipp_check_message( m );
-	}
-	
 	if( nipp_send_sync() < 0 ) return -1;
 	
-	return nipp_send_buffer( m, length + NIPP_HDRLEN(m));
+	return nipp_send_buffer( m, length + NIPP_HDRLEN);
 }
 
 
-nipp_message_t *nipp_get_message( unsigned timeout, int expect_sechdr )
+nipp_message_t *nipp_get_message( unsigned timeout )
 {
 	static nipp_message_t b;
 	static unsigned bytes = 0;
@@ -124,19 +107,9 @@ nipp_message_t *nipp_get_message( unsigned timeout, int expect_sechdr )
 		found_sync = 1;
 	}
 
-	if (expect_sechdr >= 0)
-		hdrlen = (expect_sechdr ? 8 : 6);
-	else
+	hdrlen = 6;
+	while( bytes < hdrlen )
 	{
-		// Get the first byte. We need it to know how long the header is.
-		c = nipp_get_bytes( b, 1, &timeout );
-		if (c == 0)
-			return 0;
-		
-		bytes ++;
-		hdrlen = NIPP_HDRLEN(&b);
-	}
-	while( bytes < hdrlen ){
 		c = nipp_get_bytes( b + bytes, hdrlen - bytes,
 							&timeout );
 		if( !c ) return 0;	// timeout or other problem
@@ -154,7 +127,7 @@ nipp_message_t *nipp_get_message( unsigned timeout, int expect_sechdr )
 		return 0;
 	}
 	
-	t += NIPP_HDRLEN(&b);
+	t += NIPP_HDRLEN;
 	
 	while( bytes < t ) {
 		c = nipp_get_bytes( b + bytes, t - bytes, &timeout );
