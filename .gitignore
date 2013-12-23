@@ -10,3 +10,8 @@
 *.lai
 *.la
 *.a
+
+# compiled programs
+bin/ascii2nipp
+bin/nipp2ascii
+bin/nipp_terminal
