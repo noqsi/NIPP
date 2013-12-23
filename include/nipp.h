@@ -21,9 +21,11 @@
  */
  
 #define NIPP_MAX_LENGTH		1024	// Max data bytes for this implementation
-#define NIPP_HEADER_LENGTH	8
+//#define NIPP_HEADER_LENGTH	6 the header could be 6 or 8. We don't know.
+#define NIPP_MAX_HEADER_LENGTH 12
 
-typedef uint8_t nipp_message_t[ NIPP_HEADER_LENGTH + NIPP_MAX_LENGTH ];
+#define NIPP_HDRLEN 6
+typedef uint8_t nipp_message_t[ NIPP_MAX_HEADER_LENGTH + NIPP_MAX_LENGTH ];
 
 /*
  * Macros to extract message fields. Note that headers are big-endian here.
@@ -35,28 +37,30 @@ typedef uint8_t nipp_message_t[ NIPP_HEADER_LENGTH + NIPP_MAX_LENGTH ];
 #define NIPP_ID(m) ((unsigned)((((*m)[0]<<8)|(*m)[1])&0x7ff))
 #define NIPP_SEQUENCEFLAG(m) ((unsigned)((((*m)[2]>>6) & 0x3)))
 #define NIPP_SEQUENCE(m) ((unsigned)((((*m)[2]<<8)|(*m)[3])&0x3fff))
-#define NIPP_LENGTH(m) ((unsigned)(((*m)[4]<<8)|(*m)[5])-1)	// Length of data only
+#define NIPP_LENGTH(m) ((unsigned)(((*m)[4]<<8)|(*m)[5])+1)	// Length of data+sechdr
 #define NIPP_SECHDR2(m) (((*m)[6] >> 7) & 0x1)
 #define NIPP_FUNCTION(m) ((unsigned)((*m)[6]&0x7f))
 #define NIPP_CHECKSUM(m) ((*m)[7])
-#define NIPP_DATA(m) (((*m)+NIPP_HEADER_LENGTH))
+#define NIPP_DATA(m) (((*m)+NIPP_HDRLEN))
 
 /*
  * And some macros for storing message fields.
  */
-#define WR_NIPP_COMMAND(m, v)  (((*m)[0] = ((*m)[0] & 0xEF) | ((v) << 4)
+#define WR_NIPP_SECHDR(m, v) ((*m)[0] = (((*m)[0] & ~CCSDS_SECONDARY) | (CCSDS_SECONDARY * !!v)))
+#define WR_NIPP_COMMAND(m, v)  ((*m)[0] = (((*m)[0] & 0xEF) | ((v) << 4)))
 #define WR_NIPP_ID(m, v) { (*m)[0] = ((*m)[0] & 0xF8) | (((v) >> 8) & 0x7); (*m)[1] = ((v) & 0xFF); }
-#define WR_NIPP_SEQUENCE(m, v) { (*m)[0] = ((*m)[2] & 0xC0) | (((v) >> 8) & 0x3F); (*m)[3] = ((v) & 0xFF); }
-#define WR_NIPP_LENGTH(m, v) { (*m)[4] = (((v)+1) >> 8); (*m)[5] = (((v)+1) & 0xFF); }
+#define WR_NIPP_SEQUENCE(m, v) { (*m)[2] = ((*m)[2] & 0xC0) | (((v) >> 8) & 0x3F); (*m)[3] = ((v) & 0xFF); }
+#define WR_NIPP_SEQUENCEFLAG(m, v) ((*m)[2] = (((*m)[2] & 0x3F) | v << 6))
+#define WR_NIPP_LENGTH(m, v) { (*m)[4] = (((v)-1) >> 8); (*m)[5] = (((v)-1) & 0xFF); }
 #define WR_NIPP_FUNCTION(m, v) (*m)[6] = ((*m)[6] & 0x80) | ((v) & 0x7f)
 
 /*
  * Primary API from nipp.c
  */
 
-extern nipp_message_t *nipp_copy_message(nipp_message_t *msg, int length, int function);
+extern nipp_message_t *nipp_copy_message(nipp_message_t *msg, int length);
 extern nipp_message_t *nipp_new_message( bool command, unsigned id,
-	unsigned sequence, unsigned length, unsigned function );
+	unsigned sequence, unsigned length );
 
 extern int nipp_truncate( nipp_message_t *msg, unsigned length );
 
@@ -66,7 +70,13 @@ extern nipp_message_t *nipp_get_message( unsigned timeout );
 
 extern uint8_t nipp_check_message( nipp_message_t *msg );
 
+extern void nipp_add_checksum ( nipp_message_t *msg );
+
 extern int nipp_default_handler( nipp_message_t *msg );
+
+unsigned int nipp_unpack(uint8_t *m, int offset, int lenval);
+
+void nipp_pack(uint8_t *m, int offset, int lenval, unsigned int val);
 
 extern int nipp_errno;
 

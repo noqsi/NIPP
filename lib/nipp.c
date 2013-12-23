@@ -7,50 +7,55 @@ int nipp_errno;
  * Compute the "checksum" (really longitudinal parity).
  * Should be zero for a valid message.
  */
-
 uint8_t nipp_check_message( nipp_message_t *m )
 {
-	unsigned len = NIPP_LENGTH(m) + NIPP_HEADER_LENGTH;
+	unsigned len = NIPP_LENGTH(m) + NIPP_HDRLEN;
 	unsigned i;
 	uint8_t parity = 0xff;
-	
-	for( i = 0; i < len; i += 1 ) parity ^= (*m)[i];
+
+	for( i = 0; i < len; i += 1 )
+		parity ^= (*m)[i];
 	
 	return parity;
 }
 
+void
+nipp_add_checksum( nipp_message_t *m)
+{
+	(*m)[7] = 0; // clear it, so the check_message is accurate
+	(*m)[7] = nipp_check_message( m );
+}
 
-nipp_message_t *nipp_copy_message(nipp_message_t *msg, int length, int function)
+nipp_message_t *nipp_copy_message(nipp_message_t *msg, int length)
 {
 	return nipp_new_message(
 		NIPP_COMMAND(msg), 
 		NIPP_ID(msg), 
 		NIPP_SEQUENCE(msg),
-		length, function);
+		length);
 }
 
 nipp_message_t *nipp_new_message( bool command, unsigned id,
-	unsigned sequence, unsigned length, unsigned function )
+	unsigned sequence, unsigned length )
 {
 	nipp_message_t *m = nipp_outgoing( length );
-	
+	int sechdr = 1;
+
 	if( !m ) return 0;	// errno already set
-	
-	if( id > 0x7ff || function > 0x7f ) {
+
+	if( id > 0x7ff )
+	{
 		nipp_errno = NIPP_INVALID;
 		return 0;
 	}
 	
-	(*m)[0] = CCSDS_VERSION | (command<<4) | CCSDS_SECONDARY | (id>>8);
+	(*m)[0] = CCSDS_VERSION | (command<<4) | (sechdr * CCSDS_SECONDARY) | (id>>8);
 	(*m)[1] = id;
 	(*m)[2] = CCSDS_SEGMENTATION | ((sequence>>8)&0x3f);	// wrap sequence
 	(*m)[3] = sequence;
-	length += 1;		// Correct for CCSDS conventions
+	length -= 1;		// Correct for CCSDS conventions
 	(*m)[4] = length>>8;
 	(*m)[5] = length;
-	(*m)[6] = CCSDS_SECONDARY_HEADER | function;
-	
-	// Can't fill in parity byte yet
 	
 	return m;
 }
@@ -64,14 +69,12 @@ int nipp_truncate( nipp_message_t *m, unsigned length )
 		return -1;
 	}
 	
-	length += 1;		// Correct for CCSDS conventions
+	length -= 1;		// Correct for CCSDS conventions
 	(*m)[4] = length>>8;
 	(*m)[5] = length;
 	
 	return 0;
 }
-
-
 
 int nipp_send( nipp_message_t *m )
 {
@@ -83,12 +86,9 @@ int nipp_send( nipp_message_t *m )
 		return -1;
 	}
 	
-	(*m)[7] = 0; // clear it, so the check_message is accurate
-	(*m)[7] = nipp_check_message( m );
-	
 	if( nipp_send_sync() < 0 ) return -1;
 	
-	return nipp_send_buffer( m, length + NIPP_HEADER_LENGTH );
+	return nipp_send_buffer( m, length + NIPP_HDRLEN);
 }
 
 
@@ -99,16 +99,19 @@ nipp_message_t *nipp_get_message( unsigned timeout )
 	static int found_sync = 0;
 	unsigned c, t;
 	int n;
+	int hdrlen;
 	
 	if( !found_sync ) {
 		n = nipp_find_sync( &timeout );
 		if( n < 0 ) return 0;		// Error looking for sync
 		found_sync = 1;
 	}
-	
-	while( bytes < NIPP_HEADER_LENGTH ){
-		c = nipp_get_bytes( b + bytes, NIPP_HEADER_LENGTH - bytes,
-			&timeout );
+
+	hdrlen = 6;
+	while( bytes < hdrlen )
+	{
+		c = nipp_get_bytes( b + bytes, hdrlen - bytes,
+							&timeout );
 		if( !c ) return 0;	// timeout or other problem
 		bytes += c;
 	}
@@ -124,7 +127,7 @@ nipp_message_t *nipp_get_message( unsigned timeout )
 		return 0;
 	}
 	
-	t += NIPP_HEADER_LENGTH;
+	t += NIPP_HDRLEN;
 	
 	while( bytes < t ) {
 		c = nipp_get_bytes( b + bytes, t - bytes, &timeout );
@@ -143,4 +146,63 @@ nipp_message_t *nipp_get_message( unsigned timeout )
 int nipp_default_handler( nipp_message_t *msg )
 {
 	return 0;	// Stub for now
+}
+
+unsigned int
+nipp_unpack(uint8_t *m, int offset, int lenval)
+{
+	int out=0;
+	int outlen = 0;
+	int byte, toget, offbit, offbyte;
+
+	while (outlen < lenval)
+	{
+        offbit = (offset + outlen) % 8;
+        offbyte = (offset + outlen) / 8;
+		byte = m[offbyte];
+
+		if (lenval + offbit - outlen < 8)
+			toget = lenval - outlen;
+		else
+			toget = 8 - offbit;
+
+		offbit = 8 - (offbit + toget);
+		out = (out << toget) | ((byte >> offbit) & ((1<<toget)-1));
+		outlen += toget;
+	}
+
+	return out;
+}
+
+void
+nipp_pack(uint8_t *m, int offset, int lenval, unsigned int val)
+{
+	int endoffset, mask, toset, val2set;
+	int offbit, offbyte;
+
+    endoffset = offset + lenval;
+
+    while (offset < endoffset)
+	{
+        offbit = offset % 8;
+        offbyte = offset / 8;
+        mask=0;
+
+        // compute toset. it's 8-offbit unless that goes beyond endoffset
+        toset = 8-offbit;
+        if (offset + toset > endoffset)
+            toset = endoffset - offset;
+
+        val2set = val >> (endoffset - offset - toset);
+        // now recompute offbit based on toset
+        offbit = 8 - (offbit + toset);
+
+        if (offbit > 0)
+            mask = (1<<offbit) - 1;
+        if (toset + offbit != 8)
+            mask = mask | (~((1<< (toset + offbit)) - 1));
+        m[offbyte] = (m[offbyte] & mask) | ((val2set << offbit) & (~mask & 0xFF));
+        // val = val >> toset
+        offset = offset + toset;
+	}
 }
