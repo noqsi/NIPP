@@ -12,6 +12,7 @@
 *.a
 
 # compiled programs
+bin/TAGS
 bin/ascii2nipp
 bin/nipp2ascii
 bin/nipp_terminal
