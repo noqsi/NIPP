@@ -48,7 +48,7 @@ typedef uint8_t nipp_message_t[ NIPP_MAX_HEADER_LENGTH + NIPP_MAX_LENGTH ];
  */
 #define WR_NIPP_SECHDR(m, v) ((*m)[0] = (((*m)[0] & ~CCSDS_SECONDARY) | (CCSDS_SECONDARY * !!v)))
 #define WR_NIPP_COMMAND(m, v)  ((*m)[0] = (((*m)[0] & 0xEF) | ((v) << 4)))
-#define WR_NIPP_ID(m, v) { (*m)[0] = ((*m)[0] & 0xF8) | (((v) >> 8) & 0x7); (*m)[1] = ((v) & 0xFF); }
+#define WR_NIPP_ID(m, v) { (*m)[0] = ((*m)[0] & 0xF8) | (((v) >> 8) & 0x7); (*m)[1] = ((v) & 0x7FF); }
 #define WR_NIPP_SEQUENCE(m, v) { (*m)[2] = ((*m)[2] & 0xC0) | (((v) >> 8) & 0x3F); (*m)[3] = ((v) & 0xFF); }
 #define WR_NIPP_SEQUENCEFLAG(m, v) ((*m)[2] = (((*m)[2] & 0x3F) | v << 6))
 #define WR_NIPP_LENGTH(m, v) { (*m)[4] = (((v)-1) >> 8); (*m)[5] = (((v)-1) & 0xFF); }
